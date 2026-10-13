@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+.congestion-marker {
+  background: transparent;
+  border: 0;
+}
+
+.congestion-marker span {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid white;
+  border-radius: 9999px;
+  box-shadow: 0 1px 5px rgb(0 0 0 / 35%);
+}
+
+.current-location-icon {
+  position: relative;
+  border: 0;
+  background: transparent;
+}
+
+.current-location-accuracy {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 2px solid white;
+  border-radius: 9999px;
+  background: #64748b;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  min-width: 34px;
+  padding: 0 5px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+}
+
+.current-location-pin {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  width: 25px;
+  height: 25px;
+  transform: translateX(-50%) rotate(-45deg);
+  border: 3px solid white;
+  border-radius: 50% 50% 50% 0;
+  background: #ef4444;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 40%);
+}
+
+.current-location-pin::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: white;
+}
+
+:root {
+  --background: #f3eee4;
+  --foreground: #1c2926;
+}
+
+@theme inline {
+  --color-sand: #f3eee4;
+  --color-ink: #1c2926;
+  --color-vermilion: #bb4a35;
+  --font-sans: var(--font-gothic-a1);
+  --font-serif: var(--font-gothic-a1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-gothic-a1), sans-serif;
+}
+
+.hero-grid {
+  background-image: linear-gradient(rgba(28, 41, 38, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 41, 38, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black 20%, transparent 90%);
+}
+
+.photo-placeholder {
+  background:
+    linear-gradient(180deg, rgba(42, 55, 47, 0.08), rgba(42, 55, 47, 0.65)),
+    radial-gradient(circle at 50% 18%, #d9c5a8 0 8%, transparent 8.5%),
+    linear-gradient(120deg, #87917a 0 22%, #b8aa8b 22% 53%, #677568 53% 100%);
+}

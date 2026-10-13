@@ -1,0 +1,39 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy on Amazon Linux 2023
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /home/ec2-user/kyoto-app
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+            npm ci
+            npx prisma migrate deploy
+            npm run build
+            pm2 reload kyoto-app --update-env || pm2 start npm --name kyoto-app -- start
+            pm2 save
