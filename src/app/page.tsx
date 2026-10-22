@@ -23,6 +23,53 @@ const recommendationParts = {
   },
 } as const;
 
+const howToUse = {
+  ja: {
+    eyebrow: "はじめての方へ",
+    title: "4ステップで、京都の旅を組み立てよう。",
+    intro: "気になる場所を探して、地図で距離を確認。詳細を見ながらお気に入りを集め、最後に移動ルートを作れます。",
+    steps: [
+      { number: "01", title: "行きたい場所を探す", text: "「スポットを探す」から、寺社・食事・文化施設などのカテゴリやキーワードで検索します。", action: "スポットを探す", href: "/spots" },
+      { number: "02", title: "地図で位置関係を見る", text: "「地図を見る」では、スポットの場所と混雑の目安を確認できます。現在地から近い場所を探すこともできます。", action: "地図を見る", href: "/map" },
+      { number: "03", title: "詳細を確認して保存する", text: "スポットを開くと、住所・営業時間・料金・公式サイトを確認できます。気になる場所はお気に入りに保存できます。", action: "お気に入りを見る", href: "/favorites" },
+      { number: "04", title: "ルートを作って出発する", text: "地図で目的地を選び、現在地と移動方法を指定すると、京都観光のルートを表示できます。", action: "ルートを作る", href: "/map" },
+    ],
+  },
+  en: {
+    eyebrow: "GETTING STARTED",
+    title: "Build your Kyoto day in four steps.",
+    intro: "Find places, check their positions on the map, save your favorites, and create a route for the day.",
+    steps: [
+      { number: "01", title: "Find places to visit", text: "Use Explore spots to search by category or keyword, from temples and food to culture and nature.", action: "Explore spots", href: "/spots" },
+      { number: "02", title: "See them on the map", text: "Open the map to check locations, congestion estimates, and places near your current location.", action: "View the map", href: "/map" },
+      { number: "03", title: "Review and save", text: "Open a spot for its address, hours, price, and official site. Save places you want to remember.", action: "View favorites", href: "/favorites" },
+      { number: "04", title: "Plan your route", text: "Choose destinations, your starting location, and a travel mode to display a sightseeing route.", action: "Plan a route", href: "/map" },
+    ],
+  },
+  zh: {
+    eyebrow: "使用指南",
+    title: "四步规划你的京都之旅。",
+    intro: "搜索景点，在地图上确认位置，收藏想去的地方，最后制作当天的路线。",
+    steps: [
+      { number: "01", title: "寻找想去的地方", text: "在“探索景点”中按类别或关键词搜索寺社、美食、文化和自然景点。", action: "探索景点", href: "/spots" },
+      { number: "02", title: "在地图上确认位置", text: "打开地图查看景点位置、拥挤程度参考，以及当前位置附近的景点。", action: "查看地图", href: "/map" },
+      { number: "03", title: "查看详情并收藏", text: "打开景点详情，查看地址、营业时间、费用和官方网站，并收藏想去的地方。", action: "查看收藏", href: "/favorites" },
+      { number: "04", title: "制作出行路线", text: "选择目的地、出发位置和交通方式，即可显示京都观光路线。", action: "制作路线", href: "/map" },
+    ],
+  },
+  ko: {
+    eyebrow: "사용 방법",
+    title: "네 단계로 교토 여행을 만들어 보세요.",
+    intro: "가고 싶은 장소를 찾고, 지도에서 위치를 확인한 뒤, 즐겨찾기와 이동 경로를 만들어 보세요.",
+    steps: [
+      { number: "01", title: "가고 싶은 장소 찾기", text: "명소 찾기에서 사찰, 음식, 문화, 자연 등의 카테고리나 키워드로 검색합니다.", action: "명소 찾기", href: "/spots" },
+      { number: "02", title: "지도에서 위치 확인", text: "지도에서 장소 위치와 혼잡도 참고 정보를 확인하고 현재 위치 주변도 찾아볼 수 있습니다.", action: "지도 보기", href: "/map" },
+      { number: "03", title: "상세 정보와 저장", text: "주소, 영업시간, 요금, 공식 사이트를 확인하고 가고 싶은 장소를 즐겨찾기에 저장합니다.", action: "즐겨찾기 보기", href: "/favorites" },
+      { number: "04", title: "이동 경로 만들기", text: "목적지와 출발 위치, 이동 방법을 선택하면 교토 관광 경로를 표시할 수 있습니다.", action: "경로 만들기", href: "/map" },
+    ],
+  },
+} as const;
+
 function getDailyRecommendation(language: string) {
   const parts = recommendationParts[language as keyof typeof recommendationParts] ?? recommendationParts.ja;
   const day = Math.floor(Date.now() / 86_400_000);
@@ -33,6 +80,7 @@ function getDailyRecommendation(language: string) {
 export default async function Home({ searchParams }: { searchParams: Promise<{ language?: string }> }) {
   const { language = "ja" } = await searchParams;
   const t = getMessages(language);
+  const guide = howToUse[language as keyof typeof howToUse] ?? howToUse.ja;
   return (
     <main className="overflow-hidden">
       <section className="relative isolate">
@@ -129,15 +177,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
       <section id="about" className="bg-sand px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-vermilion">{t.aboutEyebrow}</p>
-            <h2 className="mt-4 font-serif text-4xl leading-tight text-ink sm:text-5xl">{t.aboutTitle}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-vermilion">{guide.eyebrow}</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight text-ink sm:text-5xl">{guide.title}</h2>
+            <p className="mt-6 max-w-lg text-sm leading-7 text-ink/60">{guide.intro}</p>
           </div>
-          <div className="mt-14 grid gap-8 border-t border-ink/15 pt-8 md:grid-cols-3">
-            {t.highlights.map((highlight) => (
-              <article key={highlight.number}>
-                <p className="text-sm font-semibold text-vermilion">{highlight.number}</p>
-                <h3 className="mt-7 font-serif text-2xl text-ink">{highlight.title}</h3>
-                <p className="mt-4 max-w-xs text-sm leading-7 text-ink/60">{highlight.text}</p>
+          <div className="mt-14 grid gap-4 border-t border-ink/15 pt-8 sm:grid-cols-2 lg:grid-cols-4">
+            {guide.steps.map((step) => (
+              <article key={step.number} className="flex flex-col rounded-2xl border border-ink/10 bg-white/40 p-6">
+                <p className="text-sm font-semibold text-vermilion">{step.number}</p>
+                <h3 className="mt-5 font-serif text-2xl text-ink">{step.title}</h3>
+                <p className="mt-4 flex-1 text-sm leading-7 text-ink/60">{step.text}</p>
+                <Link href={`${step.href}?language=${language}`} className="mt-6 text-sm font-semibold text-vermilion transition-transform hover:translate-x-1">
+                  {step.action} <span aria-hidden="true">→</span>
+                </Link>
               </article>
             ))}
           </div>

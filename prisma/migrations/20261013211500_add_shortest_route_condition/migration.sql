@@ -1,0 +1,1 @@
+ALTER TYPE "RouteCondition" ADD VALUE 'SHORTEST';

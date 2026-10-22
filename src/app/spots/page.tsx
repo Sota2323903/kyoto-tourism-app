@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 
-import { listPublishedSpots } from "@/services/spot-service";
+import { listPublishedCategories, listPublishedSpots } from "@/services/spot-service";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { getLocalizedSpotName, getMessages } from "@/lib/i18n";
+import { getLocalizedCategory, getLocalizedSpotName, getMessages } from "@/lib/i18n";
 import { NearbySpots } from "@/components/nearby-spots";
 import { MapSearchHistory } from "@/components/map-search-history";
 import { SpotMapLoader } from "@/components/map/SpotMapLoader";
@@ -11,16 +12,26 @@ import { AccountNav } from "@/components/account-nav";
 export default async function SpotsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; language?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; popularity?: "LOCAL_FAVORITE" | "MAJOR"; language?: string }>;
 }) {
   const params = await searchParams;
   const t = getMessages(params.language);
-  const result = await listPublishedSpots({
-    query: params.q,
-    category: params.category,
-    language: params.language ?? "ja",
-    pageSize: 50,
-  });
+  const [result, categories] = await Promise.all([
+    listPublishedSpots({
+      query: params.q,
+      category: params.category,
+      popularity: params.popularity,
+      language: params.language ?? "ja",
+      pageSize: 50,
+    }),
+    listPublishedCategories(),
+  ]);
+  const groupedSpots = categories
+    .map((category) => ({
+      category,
+      spots: result.spots.filter((spot) => spot.category === category),
+    }))
+    .filter((group) => group.spots.length > 0);
 
   return (
     <main className="min-h-screen bg-sand px-6 py-10 sm:px-10 lg:px-16">
@@ -35,11 +46,20 @@ export default async function SpotsPage({
           </div>
         </header>
         <section className="mt-16">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-vermilion">Discover Kyoto</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-vermilion">{t.discoverEyebrow}</p>
           <h1 className="mt-3 font-serif text-5xl text-ink">{t.searchTitle}</h1>
-          <form className="mt-8 flex max-w-2xl gap-3" action="/spots">
+          <form className="mt-8 flex max-w-3xl flex-wrap gap-3" action="/spots">
             <input name="q" defaultValue={params.q} placeholder={t.searchPlaceholder} className="min-w-0 flex-1 rounded-full border border-ink/15 bg-white px-5 py-3 text-sm outline-none focus:border-vermilion" />
             <input type="hidden" name="language" value={params.language ?? "ja"} />
+            <select name="category" defaultValue={params.category ?? ""} className="rounded-full border border-ink/15 bg-white px-4 py-3 text-sm text-ink outline-none">
+              <option value="">{t.allCategories}</option>
+              {categories.map((category) => <option key={category} value={category}>{getLocalizedCategory(category, params.language)}</option>)}
+            </select>
+            <select name="popularity" defaultValue={params.popularity ?? ""} className="rounded-full border border-ink/15 bg-white px-4 py-3 text-sm text-ink outline-none">
+              <option value="">{t.allPopularity}</option>
+              <option value="LOCAL_FAVORITE">{t.localFavorite}</option>
+              <option value="MAJOR">{t.majorSpot}</option>
+            </select>
             <button className="rounded-full bg-vermilion px-6 py-3 text-sm font-semibold text-white" type="submit">{t.search}</button>
           </form>
         </section>
@@ -62,11 +82,28 @@ export default async function SpotsPage({
             }))}
           />
         </section>
-        <section className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {result.spots.map((spot) => (
+        <section className="mt-12 space-y-12">
+          {groupedSpots.map((group) => <div key={group.category}>
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <h2 className="font-serif text-3xl text-ink">{getLocalizedCategory(group.category, params.language)}</h2>
+              <span className="text-sm text-ink/50">{group.spots.length}</span>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {group.spots.map((spot) => (
             <article key={spot.id} className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
-              <div className="photo-placeholder flex h-40 items-end p-5">
-                <span className="rounded-full bg-sand/85 px-3 py-1 text-xs text-ink">{spot.category}</span>
+              <div className="relative h-40">
+                {spot.images[0] ? (
+                  <Image
+                    src={spot.images[0].url}
+                    alt={spot.images[0].altText ?? getLocalizedSpotName(spot.slug, spot.name, params.language)}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : <div className="photo-placeholder h-full" />}
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                <span className="rounded-full bg-sand/85 px-3 py-1 text-xs text-ink">{getLocalizedCategory(spot.category, params.language)}{spot.category === "食事" && ` / ${spot.popularity === "LOCAL_FAVORITE" ? t.localFavorite : t.majorSpot}`}</span>
+                </div>
               </div>
               <div className="p-5">
                 <h2 className="font-serif text-2xl text-ink">
@@ -81,7 +118,9 @@ export default async function SpotsPage({
                 </div>
               </div>
             </article>
-          ))}
+            ))}
+            </div>
+          </div>)}
         </section>
         <NearbySpots language={params.language ?? "ja"} />
         {result.spots.length === 0 && <p className="mt-12 rounded-2xl border border-dashed border-ink/20 p-8 text-center text-ink/60">{t.noResults}</p>}

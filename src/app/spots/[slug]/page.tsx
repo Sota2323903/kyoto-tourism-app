@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getPublishedSpotBySlug } from "@/services/spot-service";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { getMessages } from "@/lib/i18n";
+import { getLocalizedCategory, getLocalizedSpotName, getMessages } from "@/lib/i18n";
 import { FavoriteButton } from "@/components/favorite-button";
 import { AccountNav } from "@/components/account-nav";
 import { getServerSession } from "next-auth";
@@ -26,7 +26,12 @@ export default async function SpotDetailPage({
   const favorite = session?.user?.id ? await isFavorite(session.user.id, spot.id) : false;
 
   const translation = spot.translations[0];
-  const categoryName = spot.categoryRef?.translations[0]?.name ?? spot.category;
+  const categoryName = spot.categoryRef?.translations[0]?.name ?? getLocalizedCategory(spot.category, query.language);
+  const spotName = getLocalizedSpotName(slug, translation?.name ?? spot.name, query.language);
+  const priceGuide = typeof spot.priceInfo === "object" && spot.priceInfo !== null
+    ? (spot.priceInfo as Record<string, unknown>)[query.language ?? "ja"] ?? (spot.priceInfo as Record<string, unknown>).ja
+    : spot.priceInfo;
+  const priceText = priceGuide == null ? "" : String(priceGuide);
   return (
     <main className="min-h-screen bg-sand px-6 py-10 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
@@ -46,14 +51,14 @@ export default async function SpotDetailPage({
               <div className="absolute inset-0 bg-ink/45" />
               <div className="relative">
                 <span className="rounded-full bg-sand/85 px-3 py-1 text-xs text-ink">{categoryName}</span>
-                <h1 className="mt-4 font-serif text-5xl text-white">{translation?.name ?? spot.name}</h1>
+                <h1 className="mt-4 font-serif text-5xl text-white">{spotName}</h1>
               </div>
             </div>
           ) : (
           <div className="photo-placeholder flex min-h-64 items-end p-8 sm:min-h-80">
             <div>
               <span className="rounded-full bg-sand/85 px-3 py-1 text-xs text-ink">{categoryName}</span>
-              <h1 className="mt-4 font-serif text-5xl text-white">{translation?.name ?? spot.name}</h1>
+              <h1 className="mt-4 font-serif text-5xl text-white">{spotName}</h1>
             </div>
           </div>
           )}
@@ -68,12 +73,17 @@ export default async function SpotDetailPage({
               <p className="text-sm text-ink">{t.latitude}: {Number(spot.latitude).toFixed(5)}</p>
               <p className="text-sm text-ink">{t.longitude}: {Number(spot.longitude).toFixed(5)}</p>
               {spot.openingHours && <p className="text-sm text-ink">{t.hours}: {String(spot.openingHours)}</p>}
-              {spot.priceInfo && <p className="text-sm text-ink">{t.price}: {String(spot.priceInfo)}</p>}
+              {priceText && <p className="text-sm text-ink">{t.price}: {priceText}</p>}
+              <div className="border-t border-ink/10 pt-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-ink/45">{t.officialSocial}</p>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {spot.instagramUrl ? <a className="text-sm font-semibold text-vermilion" href={spot.instagramUrl} target="_blank" rel="noreferrer">{t.instagram}</a> : <span className="text-sm text-ink/45">{t.instagram}: {t.socialNotRegistered}</span>}
+                  {spot.xUrl ? <a className="text-sm font-semibold text-vermilion" href={spot.xUrl} target="_blank" rel="noreferrer">{t.x}</a> : <span className="text-sm text-ink/45">{t.x}: {t.socialNotRegistered}</span>}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-3 pt-2">
                 <FavoriteButton spotId={spot.id} initialFavorite={favorite} language={query.language} />
                 {spot.officialUrl && <a className="rounded-full bg-vermilion px-4 py-2 text-sm font-semibold text-white" href={spot.officialUrl} target="_blank" rel="noreferrer">{t.official}</a>}
-                {spot.instagramUrl && <a className="text-sm font-semibold text-vermilion" href={spot.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a>}
-                {spot.xUrl && <a className="text-sm font-semibold text-vermilion" href={spot.xUrl} target="_blank" rel="noreferrer">X ↗</a>}
               </div>
             </aside>
           </div>

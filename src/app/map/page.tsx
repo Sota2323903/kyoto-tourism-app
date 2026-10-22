@@ -1,7 +1,7 @@
 import { RoutePlanner } from "@/components/route-planner";
-import { listPublishedSpots } from "@/services/spot-service";
+import { listPublishedCategories, listPublishedSpots } from "@/services/spot-service";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { getLocalizedSpotName, getMessages } from "@/lib/i18n";
+import { getLocalizedCategory, getLocalizedSpotName, getMessages } from "@/lib/i18n";
 import Link from "next/link";
 import { MapSearchHistory } from "@/components/map-search-history";
 import { AccountNav } from "@/components/account-nav";
@@ -9,17 +9,24 @@ import { AccountNav } from "@/components/account-nav";
 export default async function MapPage({
   searchParams,
 }: {
-  searchParams: Promise<{ spot?: string; language?: string; q?: string }>;
+  searchParams: Promise<{ spot?: string; language?: string; q?: string; category?: string }>;
 }) {
-  const { spot: selectedSpotId, language = "ja", q = "" } = await searchParams;
+  const { spot: selectedSpotId, language = "ja", q = "", category = "" } = await searchParams;
   const t = getMessages(language);
-  const { spots } = await listPublishedSpots({ pageSize: 100, language, query: q });
+  const [{ spots }, categories] = await Promise.all([
+    listPublishedSpots({ pageSize: 100, language, query: q, category: category || undefined }),
+    listPublishedCategories(),
+  ]);
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-6 py-12">
-      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm text-vermilion">EXPLORE KYOTO</p><h1 className="mt-2 font-serif text-4xl text-ink">{t.mapTitle}</h1></div><div className="flex items-center gap-3"><LanguageSwitcher language={language} /><Link href={`/spots?language=${language}`} className="rounded-full border border-ink/15 px-4 py-2 text-sm text-ink">{t.explore}</Link><AccountNav language={language} callbackUrl={`/map${q ? `?q=${encodeURIComponent(q)}` : ""}`} /></div></div>
-      <form className="flex max-w-2xl gap-3" action="/map">
+      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm text-vermilion">{t.discoverEyebrow}</p><h1 className="mt-2 font-serif text-4xl text-ink">{t.mapTitle}</h1></div><div className="flex items-center gap-3"><LanguageSwitcher language={language} /><Link href={`/spots?language=${language}`} className="rounded-full border border-ink/15 px-4 py-2 text-sm text-ink">{t.explore}</Link><AccountNav language={language} callbackUrl={`/map${q ? `?q=${encodeURIComponent(q)}` : ""}`} /></div></div>
+      <form className="flex max-w-2xl flex-wrap gap-3" action="/map">
         <input name="q" defaultValue={q} placeholder={t.searchPlaceholder} className="min-w-0 flex-1 rounded-full border border-ink/15 bg-white px-5 py-3 text-sm outline-none focus:border-vermilion" />
         <input type="hidden" name="language" value={language} />
+        <select name="category" defaultValue={category} className="rounded-full border border-ink/15 bg-white px-4 py-3 text-sm text-ink outline-none">
+          <option value="">{t.allCategories}</option>
+          {categories.map((item) => <option key={item} value={item}>{getLocalizedCategory(item, language)}</option>)}
+        </select>
         <button className="rounded-full bg-vermilion px-6 py-3 text-sm font-semibold text-white" type="submit">{t.search}</button>
       </form>
       <RoutePlanner selectedSpotId={selectedSpotId ?? (q && spots.length === 1 ? spots[0].id : undefined)} language={language} spots={spots.map((spot) => ({ id: spot.id, slug: spot.slug, latitude: Number(spot.latitude), longitude: Number(spot.longitude), title: getLocalizedSpotName(spot.slug, spot.translations[0]?.name ?? spot.name, language), address: spot.address, officialUrl: spot.officialUrl, category: spot.category, openingHours: spot.openingHours, statusOverride: spot.statusOverride }))} />
@@ -32,7 +39,7 @@ export default async function MapPage({
               {spots.map((spot) => (
                 <article key={spot.id} className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
                   <div className="photo-placeholder flex h-40 items-end p-5">
-                    <span className="rounded-full bg-sand/85 px-3 py-1 text-xs text-ink">{spot.category}</span>
+                    <span className="rounded-full bg-sand/85 px-3 py-1 text-xs text-ink">{getLocalizedCategory(spot.category, language)}</span>
                   </div>
                   <div className="p-5">
                     <h3 className="font-serif text-2xl text-ink">{getLocalizedSpotName(spot.slug, spot.translations[0]?.name ?? spot.name, language)}</h3>

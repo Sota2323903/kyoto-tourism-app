@@ -200,16 +200,39 @@ function CurrentLocation({ location, accuracy }: { location?: [number, number]; 
   return null;
 }
 
+function MapSizeUpdater() {
+  const map = useMap();
+
+  useEffect(() => {
+    const updateSize = () => map.invalidateSize({ animate: false });
+    const frame = window.requestAnimationFrame(updateSize);
+    const timer = window.setTimeout(updateSize, 250);
+    const container = map.getContainer();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+    window.addEventListener("resize", updateSize);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      observer.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [map]);
+
+  return null;
+}
+
 export function SpotMap({ spots, selectedSpotId, route, currentLocation, currentLocationAccuracy, displayMode = "route", language = "ja" }: { spots: MapSpot[]; selectedSpotId?: string; route?: [number, number][]; currentLocation?: [number, number]; currentLocationAccuracy?: number; displayMode?: MapDisplayMode; language?: string }) {
   const [timeKey, setTimeKey] = useState(() => new Date().toISOString().slice(0, 13));
   useEffect(() => {
     const timer = window.setInterval(() => setTimeKey(new Date().toISOString().slice(0, 13)), 60_000);
     return () => window.clearInterval(timer);
   }, []);
-  const center: [number, number] = spots.length ? [spots[0].latitude, spots[0].longitude] : [35.0116, 135.7681];
+  const center: [number, number] = [34.9858, 135.7588];
   return (
-    <MapContainer center={center} zoom={13} scrollWheelZoom={false} className="h-[500px] w-full rounded-2xl">
+    <MapContainer center={center} zoom={12} scrollWheelZoom={false} className="h-[500px] w-full rounded-2xl">
       <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <MapSizeUpdater />
       <CongestionOverlay spots={spots} displayMode={displayMode} timeKey={timeKey} />
       <ClusterMarkers spots={spots} selectedSpotId={selectedSpotId} displayMode={displayMode} language={language} timeKey={timeKey} />
       <RouteOverlay route={displayMode === "route" ? route : undefined} />

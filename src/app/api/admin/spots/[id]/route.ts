@@ -13,7 +13,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
   const session = await getServerSession(authOptions);
   if (!allowed(session?.user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await context.params;
-  const spot = await prisma.spot.findUnique({ where: { id }, include: { translations: true } });
+  const spot = await prisma.spot.findUnique({ where: { id }, include: { translations: true, images: { orderBy: { sortOrder: "asc" } } } });
   return spot ? NextResponse.json(spot) : NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 

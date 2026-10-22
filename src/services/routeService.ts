@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getTrafficMultiplier } from "@/lib/congestion";
 
 import type { Prisma, RouteCondition, TransportMode } from "@prisma/client";
 
@@ -10,6 +11,7 @@ export interface RouteSearchParams {
   destinations: Array<{ latitude: number; longitude: number }>;
   mode: TransportMode;
   condition: RouteCondition;
+  departureAt?: Date;
 }
 
 export interface RouteStep {
@@ -73,6 +75,17 @@ type OsrmResponse = {
   }>;
 };
 
+function routeScore(
+  route: NonNullable<OsrmResponse["routes"]>[number],
+  condition: RouteCondition,
+  departureAt: Date,
+) {
+  if (condition === "SHORTEST") return route.distance;
+  if (condition !== "AVOID_CROWDS") return route.duration;
+  const arrivalAt = new Date(departureAt.getTime() + route.duration * 1000);
+  return route.duration * getTrafficMultiplier(arrivalAt);
+}
+
 export async function calculateRoute(params: RouteSearchParams): Promise<CalculatedRoute> {
   assertCoordinates(params);
   if (!params.destinations.length || params.destinations.length > 10) {
@@ -84,11 +97,18 @@ export async function calculateRoute(params: RouteSearchParams): Promise<Calcula
     `${params.originLng},${params.originLat}`,
     ...params.destinations.map((destination) => `${destination.longitude},${destination.latitude}`),
   ].join(";");
-  const url = `${endpoint.replace(/\/$/, "")}/route/v1/${profile}/${coordinates}?overview=full&geometries=geojson&steps=true`;
+  const url = `${endpoint.replace(/\/$/, "")}/route/v1/${profile}/${coordinates}?overview=full&geometries=geojson&steps=true&alternatives=true`;
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error(`道路ルートサービスへの接続に失敗しました（${response.status}）。`);
   const payload = (await response.json()) as OsrmResponse;
-  const osrmRoute = payload.routes?.[0];
+  const departureAt = params.departureAt ?? new Date();
+  const routes = payload.routes ?? [];
+  const osrmRoute = routes.length
+    ? routes.slice(1).reduce((best, route) =>
+      routeScore(route, params.condition, departureAt) < routeScore(best, params.condition, departureAt) ? route : best,
+      routes[0],
+    )
+    : undefined;
   const geometry = osrmRoute?.geometry?.coordinates;
   if (payload.code !== "Ok" || !osrmRoute || !geometry || geometry.length < 2) {
     throw new Error("現在地から目的地までの道路ルートが見つかりませんでした。");

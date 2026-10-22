@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
@@ -24,7 +25,17 @@ export default async function FavoritesPage({ searchParams }: { searchParams: Pr
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {favorites.map(({ spot }) => (
               <article key={spot.id} className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
-                <div className="photo-placeholder h-40" />
+                <div className="relative h-40">
+                  {spot.images[0] ? (
+                    <Image
+                      src={spot.images[0].url}
+                      alt={spot.images[0].altText ?? getLocalizedSpotName(spot.slug, spot.name, language)}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : <div className="photo-placeholder h-full" />}
+                </div>
                 <div className="p-5">
                   <h2 className="font-serif text-2xl text-ink"><Link href={`/spots/${spot.slug}?language=${language}`}>{getLocalizedSpotName(spot.slug, spot.translations[0]?.name ?? spot.name, language)}</Link></h2>
                   <p className="mt-3 text-sm leading-6 text-ink/60">{spot.translations[0]?.description ?? t.defaultDescription}</p>

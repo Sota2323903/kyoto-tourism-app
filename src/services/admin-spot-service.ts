@@ -8,6 +8,7 @@ export type SpotMutationInput = {
   description?: string;
   category: string;
   categoryId?: string;
+  popularity?: "LOCAL_FAVORITE" | "MAJOR";
   address?: string;
   latitude: number;
   longitude: number;
@@ -17,6 +18,7 @@ export type SpotMutationInput = {
   instagramUrl?: string;
   xUrl?: string;
   officialUrl?: string;
+  images?: Array<{ url: string; altText?: string; sortOrder?: number }>;
   translations?: Array<{ language: string; name: string; description?: string }>;
 };
 
@@ -33,6 +35,11 @@ function validate(input: SpotMutationInput) {
   for (const value of [input.instagramUrl, input.xUrl, input.officialUrl]) {
     if (value && !value.startsWith("https://")) throw new Error("External links must use HTTPS.");
   }
+  for (const image of input.images ?? []) {
+    if (!image.url.startsWith("https://") && !image.url.startsWith("/images/")) {
+      throw new Error("Image URLs must use HTTPS or start with /images/.");
+    }
+  }
 }
 
 export async function createSpot(input: SpotMutationInput, userId: string) {
@@ -46,6 +53,7 @@ export async function createSpot(input: SpotMutationInput, userId: string) {
         description: input.description,
         category: input.category,
         categoryId: input.categoryId || null,
+        popularity: input.popularity ?? "MAJOR",
         address: input.address,
         latitude: input.latitude,
         longitude: input.longitude,
@@ -57,6 +65,16 @@ export async function createSpot(input: SpotMutationInput, userId: string) {
         officialUrl: input.officialUrl,
       },
     });
+    if (input.images?.length) {
+      await transaction.spotImage.createMany({
+        data: input.images.map((image, index) => ({
+          spotId: created.id,
+          url: image.url,
+          altText: image.altText,
+          sortOrder: image.sortOrder ?? index,
+        })),
+      });
+    }
     if (input.translations?.length) {
       await transaction.spotTranslation.createMany({
         data: input.translations.map((translation) => ({ ...translation, spotId: created.id })),
@@ -94,6 +112,7 @@ export async function updateSpot(id: string, input: Partial<SpotMutationInput>, 
       description: input.description,
       category: input.category,
       categoryId: input.categoryId,
+      popularity: input.popularity,
       address: input.address,
       latitude: input.latitude,
       longitude: input.longitude,
@@ -110,6 +129,19 @@ export async function updateSpot(id: string, input: Partial<SpotMutationInput>, 
       prisma.spotTranslation.deleteMany({ where: { spotId: id } }),
       prisma.spotTranslation.createMany({
         data: input.translations.map((translation) => ({ ...translation, spotId: id })),
+      }),
+    ]);
+  }
+  if (input.images) {
+    await prisma.$transaction([
+      prisma.spotImage.deleteMany({ where: { spotId: id } }),
+      prisma.spotImage.createMany({
+        data: input.images.map((image, index) => ({
+          spotId: id,
+          url: image.url,
+          altText: image.altText,
+          sortOrder: image.sortOrder ?? index,
+        })),
       }),
     ]);
   }

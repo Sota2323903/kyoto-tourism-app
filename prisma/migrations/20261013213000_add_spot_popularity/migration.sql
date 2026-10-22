@@ -1,0 +1,4 @@
+CREATE TYPE "SpotPopularity" AS ENUM ('LOCAL_FAVORITE', 'MAJOR');
+
+ALTER TABLE "Spot"
+ADD COLUMN "popularity" "SpotPopularity" NOT NULL DEFAULT 'MAJOR';

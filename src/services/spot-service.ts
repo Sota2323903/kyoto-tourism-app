@@ -6,6 +6,7 @@ export type SpotListFilters = {
   regionId?: string;
   category?: string;
   categoryId?: string;
+  popularity?: "LOCAL_FAVORITE" | "MAJOR";
   language?: string;
   query?: string;
   page?: number;
@@ -31,7 +32,10 @@ export async function listPublishedSpots(filters: SpotListFilters = {}) {
       ? { category: filters.category }
       : filters.categoryId
         ? { categoryId: filters.categoryId }
-        : {}),
+        : filters.popularity
+          ? { category: "食事" }
+          : {}),
+    ...(filters.popularity ? { popularity: filters.popularity } : {}),
     ...(search
       ? {
           OR: [
@@ -60,6 +64,7 @@ export async function listPublishedSpots(filters: SpotListFilters = {}) {
         name: true,
         description: true,
         category: true,
+        popularity: true,
         address: true,
         latitude: true,
         longitude: true,
@@ -106,6 +111,16 @@ export async function listPublishedSpots(filters: SpotListFilters = {}) {
   };
 }
 
+export async function listPublishedCategories() {
+  const categories = await prisma.spot.findMany({
+    where: { isPublished: true },
+    distinct: ["category"],
+    orderBy: { category: "asc" },
+    select: { category: true },
+  });
+  return categories.map(({ category }) => category);
+}
+
 export async function getPublishedSpotBySlug(slug: string, language = "ja") {
   return prisma.spot.findFirst({
     where: { slug, isPublished: true },
@@ -115,6 +130,7 @@ export async function getPublishedSpotBySlug(slug: string, language = "ja") {
       name: true,
       description: true,
       category: true,
+      popularity: true,
       address: true,
       latitude: true,
       longitude: true,

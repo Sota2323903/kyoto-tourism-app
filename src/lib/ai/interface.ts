@@ -20,6 +20,9 @@ export interface AiPlanRequest {
 export interface AiPlanResponse {
   title: string;
   summary: string;
+  generatedByAi?: boolean;
+  factChecked?: boolean;
+  disclaimer?: string;
   itinerary: {
     day: number;
     slots: {

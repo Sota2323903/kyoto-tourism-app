@@ -16,6 +16,7 @@ export async function POST(request: Request) {
   const legacyDestination = typeof input.destLat === "number" && typeof input.destLng === "number"
     ? [{ latitude: input.destLat, longitude: input.destLng }]
     : undefined;
+  const departureAt = input.departureAt === undefined ? new Date() : new Date(String(input.departureAt));
   if (
     typeof input.originLat !== "number" || !Number.isFinite(input.originLat) ||
     typeof input.originLng !== "number" || !Number.isFinite(input.originLng) ||
@@ -27,7 +28,8 @@ export async function POST(request: Request) {
         typeof destination.longitude === "number" && Number.isFinite(destination.longitude),
       ))) ||
     typeof input.mode !== "string" || !modes.has(input.mode) ||
-    typeof input.condition !== "string" || !conditions.has(input.condition)
+    typeof input.condition !== "string" || !conditions.has(input.condition) ||
+    Number.isNaN(departureAt.getTime())
   ) {
     return NextResponse.json({ error: "Invalid route search parameters." }, { status: 400 });
   }
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       destinations: (destinations ?? legacyDestination) as Array<{ latitude: number; longitude: number }>,
       mode: input.mode as TransportMode,
       condition: input.condition as RouteCondition,
+      departureAt,
     }));
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Route calculation failed." }, { status: 502 });

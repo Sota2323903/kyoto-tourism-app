@@ -9,7 +9,7 @@ export default async function EditSpotPage({ params, searchParams }: { params: P
   const { id } = await params;
   const { language = "ja" } = await searchParams;
   const t = getMessages(language);
-  const spot = await prisma.spot.findUnique({ where: { id } });
+  const spot = await prisma.spot.findUnique({ where: { id }, include: { images: { orderBy: { sortOrder: "asc" } } } });
   if (!spot) notFound();
-  return <main className="mx-auto max-w-7xl space-y-6 px-6 py-12"><div className="flex justify-between"><h1 className="font-serif text-4xl text-ink">{t.editSpot}</h1><LanguageSwitcher language={language} /></div><SpotForm language={language} initial={{ ...spot, latitude: Number(spot.latitude), longitude: Number(spot.longitude) }} /></main>;
+  return <main className="mx-auto max-w-7xl space-y-6 px-6 py-12"><div className="flex justify-between"><h1 className="font-serif text-4xl text-ink">{t.editSpot}</h1><LanguageSwitcher language={language} /></div><SpotForm language={language} initial={{ ...spot, latitude: Number(spot.latitude), longitude: Number(spot.longitude), images: spot.images }} /></main>;
 }

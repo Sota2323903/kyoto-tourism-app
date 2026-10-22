@@ -32,10 +32,16 @@ enum TransportMode {
 
 enum RouteCondition {
   FASTEST
+  SHORTEST
   CHEAPEST
   LESS_WALKING
   FEWER_TRANSFERS
   AVOID_CROWDS
+}
+
+enum SpotPopularity {
+  LOCAL_FAVORITE
+  MAJOR
 }
 
 model User {
@@ -135,6 +141,7 @@ model Spot {
   name          String
   description   String?    @db.Text
   category      String
+  popularity   SpotPopularity @default(MAJOR)
   categoryId    String?
   address       String?
   latitude      Decimal    @db.Decimal(10, 7)

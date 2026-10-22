@@ -29,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       className={`${gothicA1.variable} ${geistMono.variable} h-full antialiased`}
       lang="ja"
+      data-scroll-behavior="smooth"
     >
       <body className="min-h-full flex flex-col"><PwaRegister />{children}</body>
     </html>

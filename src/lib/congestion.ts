@@ -28,3 +28,12 @@ export function getCongestionTimeSlot(now = new Date()) {
   if (hour < 21) return "evening";
   return "night";
 }
+
+export function getTrafficMultiplier(now = new Date()) {
+  const hour = now.getHours();
+  if ((hour >= 7 && hour < 9) || (hour >= 17 && hour < 19)) return 1.35;
+  if (hour >= 12 && hour < 14) return 1.15;
+  if (hour >= 9 && hour < 12) return 1.05;
+  if (hour >= 19 && hour < 21) return 1.1;
+  return 1;
+}

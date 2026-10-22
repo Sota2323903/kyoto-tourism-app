@@ -104,6 +104,8 @@ export function RoutePlanner({ spots, selectedSpotId, language }: { spots: Plann
   const congestionLabels = [t.congestionLow, t.congestionNormal, t.congestionHigh, t.congestionVeryHigh];
   const [destinationIds, setDestinationIds] = useState<string[]>(selectedSpotId ? [selectedSpotId] : spots[0]?.id ? [spots[0].id] : []);
   const [mode, setMode] = useState("WALK");
+  const [routeCondition, setRouteCondition] = useState<"SHORTEST" | "AVOID_CROWDS">("AVOID_CROWDS");
+  const [departureAt, setDepartureAt] = useState("");
   const [route, setRoute] = useState<{ durationMinutes: number; costYen: number; walkingDistanceMeters: number; transfers: number; steps: { instruction: string; distanceMeters: number }[]; geometry: [number, number][] } | null>(null);
   const [aiPlan, setAiPlan] = useState<{ title: string; summary: string; itinerary: { day: number; slots: { time: string; title: string; description: string }[] }[] } | null>(null);
   const [showAiForm, setShowAiForm] = useState(false);
@@ -130,7 +132,7 @@ export function RoutePlanner({ spots, selectedSpotId, language }: { spots: Plann
   }, [areaSpots, displayMode, spots]);
   async function searchRoute() {
     if (!location || !destinations.length) return setMessage(t.routeInputRequired);
-    const response = await fetch("/api/routes/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ originLat: location.latitude, originLng: location.longitude, destinations: destinations.map((destination) => ({ latitude: destination.latitude, longitude: destination.longitude })), mode, condition: "FASTEST" }) });
+    const response = await fetch("/api/routes/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ originLat: location.latitude, originLng: location.longitude, destinations: destinations.map((destination) => ({ latitude: destination.latitude, longitude: destination.longitude })), mode, condition: routeCondition, departureAt: departureAt ? new Date(departureAt).toISOString() : undefined }) });
     const data = await response.json();
     if (!response.ok) return setMessage(data.error ?? t.routeFailed);
     setRoute(data);
@@ -149,7 +151,7 @@ export function RoutePlanner({ spots, selectedSpotId, language }: { spots: Plann
     if (!response.ok) return setMessage(data.error ?? t.aiFailed);
     setAiPlan(data);
     setShowAiForm(false);
-    setMessage(t.aiShown);
+    setMessage(data.fallback ? t.aiFallback : t.aiShown);
   }
   return <section className="space-y-4">
     <div className="space-y-3 rounded-2xl border border-ink/10 bg-white p-4">
@@ -163,7 +165,7 @@ export function RoutePlanner({ spots, selectedSpotId, language }: { spots: Plann
           setDisplayMode("congestion");
         }} className={`flex-1 rounded-full px-3 py-1.5 text-sm ${displayMode === "congestion" ? "bg-ink text-white" : "text-ink/60"}`}>{t.showCongestion}</button>
       </div>
-      <div className="grid items-start gap-3 md:grid-cols-[auto_minmax(0,1fr)_180px_auto]">
+      <div className="grid items-start gap-3 md:grid-cols-[auto_minmax(22rem,1.6fr)_minmax(14rem,1fr)_auto]">
         <button type="button" onClick={getCurrentLocation} className="h-10 whitespace-nowrap rounded-full bg-ink px-4 text-sm text-white">{loading ? "..." : t.currentLocation}</button>
         <label className="flex h-10 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm">
           <span className="whitespace-nowrap font-semibold">{t.congestionArea}</span>
@@ -181,7 +183,7 @@ export function RoutePlanner({ spots, selectedSpotId, language }: { spots: Plann
             {congestionAreas.map((area, index) => <option key={area.value} value={area.value}>{areaLabels[index]}</option>)}
           </select>
         </label>
-        <fieldset className="rounded-xl border border-ink/15 px-3 pb-2 pt-1"><legend className="px-1 text-xs font-semibold">{t.destinations}</legend><div className="flex max-h-24 flex-wrap gap-x-4 gap-y-1 overflow-y-auto">{spots.map((spot) => <label key={spot.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={destinationIds.includes(spot.id)} onChange={(event) => setDestinationIds((current) => event.target.checked ? [...current, spot.id].slice(0, 10) : current.filter((id) => id !== spot.id))} /><span>{spot.title}{spot.statusOverride?.isTemporarilyClosed ? ` (${t.temporarilyClosed})` : ""}</span></label>)}</div><p className="mt-1 text-xs text-ink/50">{t.selectedSummary(destinationIds.length)}</p></fieldset>
+        <fieldset className="min-w-0 rounded-xl border border-ink/15 px-3 pb-2 pt-1"><legend className="px-1 text-xs font-semibold">{t.destinations}</legend><div className="grid max-h-48 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2">{spots.map((spot) => <label key={spot.id} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-sand/60"><input className="h-4 w-4 shrink-0 accent-vermilion" type="checkbox" checked={destinationIds.includes(spot.id)} onChange={(event) => setDestinationIds((current) => event.target.checked ? [...current, spot.id].slice(0, 10) : current.filter((id) => id !== spot.id))} /><span className="min-w-0 break-words">{spot.title}{spot.statusOverride?.isTemporarilyClosed ? ` (${t.temporarilyClosed})` : ""}</span></label>)}</div><p className="mt-1 text-xs text-ink/50">{t.selectedSummary(destinationIds.length)}</p></fieldset>
         <fieldset className="rounded-xl border border-ink/15 px-3 pb-2 pt-1 md:col-span-2">
           <legend className="px-1 text-xs font-semibold">{t.travelMode}</legend>
           <div className="flex flex-wrap gap-2">
@@ -193,8 +195,20 @@ export function RoutePlanner({ spots, selectedSpotId, language }: { spots: Plann
             ))}
           </div>
         </fieldset>
+        <label className="flex h-10 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm">
+          <span className="whitespace-nowrap font-semibold">{t.departureTime}</span>
+          <input type="datetime-local" value={departureAt} onChange={(event) => setDepartureAt(event.target.value)} className="min-w-0 bg-transparent outline-none" />
+        </label>
+        <label className="flex h-10 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm">
+          <span className="whitespace-nowrap font-semibold">{t.routePreference}</span>
+          <select value={routeCondition} onChange={(event) => setRouteCondition(event.target.value as "SHORTEST" | "AVOID_CROWDS")} className="min-w-0 bg-transparent outline-none">
+            <option value="AVOID_CROWDS">{t.avoidCongestion}</option>
+            <option value="SHORTEST">{t.shortestRoute}</option>
+          </select>
+        </label>
         <button type="button" onClick={searchRoute} className="h-10 whitespace-nowrap rounded-full bg-vermilion px-4 text-sm text-white">{t.showRoute}</button>
       </div>
+      <p className="text-xs text-ink/55">{t.routeEstimateHint}</p>
       <button type="button" onClick={() => setShowAiForm((current) => !current)} className="h-9 w-full rounded-full border border-vermilion px-4 text-sm text-vermilion">{t.aiPlan}</button>
       {showAiForm && <div className="rounded-2xl border border-vermilion/20 bg-orange-50 p-4">
         <h2 className="font-semibold text-ink">{t.aiQuestion}</h2>
